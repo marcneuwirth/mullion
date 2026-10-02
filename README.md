@@ -15,6 +15,12 @@ cells of a grid, and everything is set in one JSON file.
 
 Needs macOS 13+.
 
+```sh
+brew install --cask marcneuwirth/tap/mullion
+```
+
+Then open Mullion from Applications. Or, without Homebrew:
+
 1. Download `Mullion-<version>.zip` from the [latest release](https://github.com/marcneuwirth/mullion/releases/latest).
 2. Unzip it, move **Mullion.app** to `/Applications`, and open it.
 3. macOS asks for **Accessibility** access (System Settings → Privacy & Security → Accessibility).
@@ -125,6 +131,7 @@ It needs these repository secrets (Settings → Secrets and variables → Action
 | `NOTARY_KEY_P8` | Contents of an App Store Connect API key (.p8), from [Users and Access → Integrations](https://appstoreconnect.apple.com/access/integrations/api), role Developer |
 | `NOTARY_KEY_ID` | That key's Key ID |
 | `NOTARY_ISSUER` | The Issuer ID shown above the keys list |
+| `HOMEBREW_TAP_TOKEN` | Optional. A fine-grained token with **Contents: read and write** on [marcneuwirth/homebrew-tap](https://github.com/marcneuwirth/homebrew-tap), so the release also updates the cask (`scripts/cask.sh`) |
 
 To build a release locally instead, save notarization credentials once with
 `xcrun notarytool store-credentials mullion` and run `NOTARY_PROFILE=mullion make release`.
