@@ -1,0 +1,19 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  build:
+    runs-on: macos-15
+    steps:
+      - uses: actions/checkout@v4
+      - name: Test
+        run: swift test
+      - name: Build app bundle
+        run: scripts/bundle.sh
+      - name: Smoke test the binary
+        run: |
+          build/Mullion.app/Contents/MacOS/Mullion --help
+          codesign --verify --verbose build/Mullion.app
