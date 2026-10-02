@@ -29,6 +29,15 @@ final class ConfigFile {
         }
     }
 
+    func open() {
+        writeDefaultIfMissing()
+        // .json often has no default app, or one that won't edit it; fall back to TextEdit.
+        if !NSWorkspace.shared.open(url) {
+            let textEdit = URL(fileURLWithPath: "/System/Applications/TextEdit.app")
+            NSWorkspace.shared.open([url], withApplicationAt: textEdit, configuration: NSWorkspace.OpenConfiguration())
+        }
+    }
+
     private func writeDefaultIfMissing() {
         guard !FileManager.default.fileExists(atPath: url.path) else { return }
         do {

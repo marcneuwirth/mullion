@@ -6,14 +6,30 @@ A tiny keyboard-only window manager for macOS, built as a replacement for [Divvy
 now that Intel-only apps are on their way out. There is no UI: shortcuts snap the focused window to
 cells of a grid, and everything is set in one JSON file.
 
-- Native Apple Silicon, no dependencies, ~750 lines of Swift
+- Native Apple Silicon, no dependencies, ~850 lines of Swift
 - Divvy-style grid placement on any display
 - **Cycle between screens:** press the same shortcut again to send the window to the next display
 - Config reloads automatically when you save it
 
 ## Install
 
-Needs macOS 13+ and the Xcode command line tools (`xcode-select --install`).
+Needs macOS 13+.
+
+1. Download `Mullion-<version>.zip` from the [latest release](https://github.com/marcneuwirth/mullion/releases/latest).
+2. Unzip it, move **Mullion.app** to `/Applications`, and open it.
+3. macOS asks for **Accessibility** access (System Settings → Privacy & Security → Accessibility).
+   Turn Mullion on.
+
+There is no window or menu bar icon. Mullion adds itself to System Settings → General → **Login Items**
+so it starts at login, and opening the app again while it runs opens your config file.
+
+**Quit Divvy first.** macOS lets two apps register the same shortcut. Mullion can only tell when the
+other app claimed it exclusively; it logs those to `~/Library/Logs/Mullion.log`, but any other overlap
+goes unnoticed.
+
+### From source
+
+Needs the Xcode command line tools (`xcode-select --install`).
 
 ```sh
 git clone git@github.com:marcneuwirth/mullion.git
@@ -21,22 +37,14 @@ cd mullion
 make install
 ```
 
-This builds `Mullion.app`, copies it to `/Applications`, and registers a LaunchAgent so it starts at login.
-
-On first launch macOS asks for **Accessibility** access (System Settings → Privacy & Security →
-Accessibility). Turn Mullion on, then run `make restart`.
-
-**Quit Divvy first.** macOS lets two apps register the same shortcut. Mullion can only tell when the
-other app claimed it exclusively; it logs those, but any other overlap goes unnoticed.
-
 | Command | What it does |
 |---|---|
-| `make install` | Build, install to `/Applications` (or `APP_DIR=…`), start at login |
-| `make restart` | Restart the background agent |
+| `make install` | Build, install to `/Applications` (or `APP_DIR=…`) and open it |
+| `make restart` | Quit and reopen Mullion |
 | `make check` | Validate your config file and exit |
 | `make logs` | Follow `~/Library/Logs/Mullion.log` |
 | `make test` | Run the unit tests |
-| `make uninstall` | Stop it and remove the app and LaunchAgent (keeps your config) |
+| `make uninstall` | Remove it from Login Items, quit, and delete the app (keeps your config) |
 
 ## Config
 
@@ -81,21 +89,45 @@ Some keys have a second name: `enter` for `return`, `esc` for `escape`, `backspa
 `comma` `period` `slash` `semicolon` `quote` `leftbracket` `rightbracket` `minus` `equal` `grave`
 `backslash` for the punctuation.
 
-To check a config without restarting: `make check`, or
-`/Applications/Mullion.app/Contents/MacOS/Mullion --check [path]`, which checks your config file when no
-path is given. `--help` lists the options.
+To check a config without restarting: `/Applications/Mullion.app/Contents/MacOS/Mullion --check [path]`,
+which checks your config file when no path is given. `--help` lists the options.
 
 ## Signing
 
-macOS ties Accessibility permission to the app's code signature. `make install` signs with a
-certificate named **Mullion Code Signing** if you have one; otherwise it signs ad-hoc, which works but
-means re-enabling Mullion in Accessibility settings after every rebuild. To create the certificate once:
+macOS ties Accessibility permission to the app's code signature, so a build signed with a stable
+certificate keeps the permission across rebuilds. `make install` signs with your **Developer ID
+Application** certificate if you have one, then one named **Mullion Code Signing**, and otherwise
+ad-hoc, which works but means re-enabling Mullion in Accessibility settings after every rebuild. To
+create a self-signed certificate:
 
 1. Open **Keychain Access** → menu **Keychain Access → Certificate Assistant → Create a Certificate…**
 2. Name: `Mullion Code Signing`, Identity Type: **Self Signed Root**, Certificate Type: **Code Signing**
 3. Create, then `make install` again and re-grant Accessibility one last time.
 
 Use a different certificate with `SIGN_IDENTITY="My Cert" make install`.
+
+## Releasing
+
+Pushing a `v*` tag runs `.github/workflows/release.yml`: it builds a universal (Apple Silicon + Intel)
+app, signs it with Developer ID, notarizes and staples it, and publishes the zip as a GitHub release.
+The version comes from the tag.
+
+```sh
+git tag v0.2.0 && git push origin v0.2.0
+```
+
+It needs these repository secrets (Settings → Secrets and variables → Actions):
+
+| Secret | Value |
+|---|---|
+| `DEVELOPER_ID_P12` | Your Developer ID Application certificate and private key, exported from Keychain Access as .p12, base64-encoded (`base64 -i cert.p12 \| pbcopy`) |
+| `DEVELOPER_ID_P12_PASSWORD` | The password you set when exporting the .p12 |
+| `NOTARY_KEY_P8` | Contents of an App Store Connect API key (.p8), from [Users and Access → Integrations](https://appstoreconnect.apple.com/access/integrations/api), role Developer |
+| `NOTARY_KEY_ID` | That key's Key ID |
+| `NOTARY_ISSUER` | The Issuer ID shown above the keys list |
+
+To build a release locally instead, save notarization credentials once with
+`xcrun notarytool store-credentials mullion` and run `NOTARY_PROFILE=mullion make release`.
 
 ## How it works
 
@@ -111,4 +143,4 @@ Use a different certificate with `SIGN_IDENTITY="My Cert" make install`.
   terminals snapping to character cells.
 
 `Sources/MullionCore` holds the config parsing, key names and grid math with no AppKit dependency, and is
-what the tests cover; CI runs them on every push. `Sources/Mullion` is the macOS agent.
+what the tests cover; CI runs them on every push. `Sources/Mullion` is the macOS app.

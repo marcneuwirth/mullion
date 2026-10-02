@@ -2,6 +2,27 @@
 import AppKit
 import MullionCore
 
+/// Starts Mullion once AppKit is up. Opening the app again while it runs opens the config file, since
+/// there is no other UI to show.
+@MainActor
+final class AppDelegate: NSObject, NSApplicationDelegate {
+    let mullion: Mullion
+
+    init(mullion: Mullion) {
+        self.mullion = mullion
+    }
+
+    func applicationDidFinishLaunching(_ notification: Notification) {
+        LoginItem.registerOnFirstLaunch()
+        mullion.start()
+    }
+
+    func applicationShouldHandleReopen(_ sender: NSApplication, hasVisibleWindows: Bool) -> Bool {
+        mullion.openConfig()
+        return false
+    }
+}
+
 /// Ties it together: registers the config's shortcuts and places the focused window on each press.
 @MainActor
 final class Mullion {
@@ -19,6 +40,10 @@ final class Mullion {
             Log.info("needs Accessibility permission: System Settings > Privacy & Security > Accessibility")
         }
         configFile.watch { [weak self] in self?.apply($0) }
+    }
+
+    func openConfig() {
+        configFile.open()
     }
 
     private func apply(_ newConfig: Config) {
