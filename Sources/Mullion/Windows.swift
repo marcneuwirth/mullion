@@ -32,13 +32,13 @@ enum Windows {
 
     static func setFrame(_ frame: Frame, of window: AXUIElement) {
         withoutEnhancedUI(for: window) {
-            var position = CGPoint(x: frame.x, y: frame.y)
-            var size = CGSize(width: frame.w, height: frame.h)
+            let position = CGPoint(x: frame.x, y: frame.y)
+            let size = CGSize(width: frame.w, height: frame.h)
             // Size, then position, then size again: the first resize can be clamped by the old screen's
             // bounds and some apps only accept a size once they have moved.
-            set(kAXSizeAttribute, of: window, type: .cgSize, value: &size)
-            set(kAXPositionAttribute, of: window, type: .cgPoint, value: &position)
-            set(kAXSizeAttribute, of: window, type: .cgSize, value: &size)
+            set(kAXSizeAttribute, of: window, type: .cgSize, value: size)
+            set(kAXPositionAttribute, of: window, type: .cgPoint, value: position)
+            set(kAXSizeAttribute, of: window, type: .cgSize, value: size)
         }
     }
 
@@ -62,11 +62,11 @@ enum Windows {
         guard AXUIElementCopyAttributeValue(element, attribute as CFString, &value) == .success,
               let value, CFGetTypeID(value) == AXValueGetTypeID()
         else { return false }
-        return AXValueGetValue(value as! AXValue, type, &result)
+        return withUnsafeMutablePointer(to: &result) { AXValueGetValue(value as! AXValue, type, $0) }
     }
 
-    private static func set<T>(_ attribute: String, of element: AXUIElement, type: AXValueType, value: inout T) {
-        guard let axValue = AXValueCreate(type, &value) else { return }
+    private static func set<T>(_ attribute: String, of element: AXUIElement, type: AXValueType, value: T) {
+        guard let axValue = withUnsafePointer(to: value, { AXValueCreate(type, $0) }) else { return }
         AXUIElementSetAttributeValue(element, attribute as CFString, axValue)
     }
 }
