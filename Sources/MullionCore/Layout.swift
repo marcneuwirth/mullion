@@ -23,9 +23,9 @@ public struct Frame: Equatable, CustomStringConvertible {
         return iw > 0 && ih > 0 ? iw * ih : 0
     }
 
-    public func isClose(to other: Frame, tolerance: Double = 2) -> Bool {
-        abs(x - other.x) <= tolerance && abs(y - other.y) <= tolerance
-            && abs(w - other.w) <= tolerance && abs(h - other.h) <= tolerance
+    /// Within 2pt on every edge, since apps round the frames they are given.
+    public func isClose(to other: Frame) -> Bool {
+        abs(x - other.x) <= 2 && abs(y - other.y) <= 2 && abs(w - other.w) <= 2 && abs(h - other.h) <= 2
     }
 
     public var description: String { "(\(x), \(y), \(w)x\(h))" }
@@ -76,21 +76,41 @@ public enum Layout {
     /// Repeat is detected two ways: the window already sits at the target frame, or it is exactly where
     /// this same shortcut last put it. The second case covers apps that round their size (terminals snap
     /// to whole character cells), so they never land precisely on the target.
-    public static func isRepeat(current: Frame, target: Frame, last: Placement?, shortcutIndex: Int) -> Bool {
+    public static func isRepeat(current: Frame, target: Frame, last: Placement?, shortcut: Shortcut) -> Bool {
         if current.isClose(to: target) { return true }
-        guard let last, last.shortcutIndex == shortcutIndex else { return false }
+        guard let last, last.shortcut == shortcut else { return false }
         return current.isClose(to: last.frame)
     }
 }
 
 /// What the most recent shortcut did, kept to detect a repeat press.
 public struct Placement: Equatable {
-    public var shortcutIndex: Int
+    public var shortcut: Shortcut
     /// The frame the window actually ended up with (read back after moving it).
     public var frame: Frame
 
-    public init(shortcutIndex: Int, frame: Frame) {
-        self.shortcutIndex = shortcutIndex
+    public init(shortcut: Shortcut, frame: Frame) {
+        self.shortcut = shortcut
         self.frame = frame
+    }
+}
+
+extension Config {
+    /// Where `shortcut` sends a window that is now at `window`: its cells on the screen holding most of the
+    /// window, or on the next screen if this press is a repeat and `cycleScreens` is on. `last` is what the
+    /// previous shortcut did to this same window. Nil when there are no screens.
+    public func target(for shortcut: Shortcut, window: Frame, screens: [Frame], last: Placement?) -> Frame? {
+        let screens = Layout.cycleOrder(screens)
+        guard !screens.isEmpty else { return nil }
+        let screen = Layout.screenIndex(for: window, in: screens)
+        let target = frame(for: shortcut.cells, on: screens[screen])
+        guard cycleScreens, screens.count > 1,
+              Layout.isRepeat(current: window, target: target, last: last, shortcut: shortcut)
+        else { return target }
+        return frame(for: shortcut.cells, on: screens[(screen + 1) % screens.count])
+    }
+
+    private func frame(for cells: Cells, on screen: Frame) -> Frame {
+        Layout.frame(for: cells, grid: grid, in: screen, gap: gap)
     }
 }

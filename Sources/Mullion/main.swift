@@ -2,11 +2,10 @@
 import AppKit
 import MullionCore
 
+/// Fixed rather than read from $XDG_CONFIG_HOME: the LaunchAgent that runs Mullion never sees the shell's
+/// environment, so `--check` in a terminal would validate a different file than the app loads.
 func defaultConfigURL() -> URL {
-    let env = ProcessInfo.processInfo.environment
-    let base = env["XDG_CONFIG_HOME"].flatMap { $0.isEmpty ? nil : URL(fileURLWithPath: $0) }
-        ?? FileManager.default.homeDirectoryForCurrentUser.appendingPathComponent(".config")
-    return base.appendingPathComponent("mullion/config.json")
+    FileManager.default.homeDirectoryForCurrentUser.appendingPathComponent(".config/mullion/config.json")
 }
 
 let arguments = Array(CommandLine.arguments.dropFirst())

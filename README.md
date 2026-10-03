@@ -6,7 +6,7 @@ A tiny keyboard-only window manager for macOS, built as a replacement for [Divvy
 now that Intel-only apps are on their way out. There is no UI: shortcuts snap the focused window to
 cells of a grid, and everything is set in one JSON file.
 
-- Native Apple Silicon, no dependencies, ~400 lines of Swift
+- Native Apple Silicon, no dependencies, ~750 lines of Swift
 - Divvy-style grid placement on any display
 - **Cycle between screens:** press the same shortcut again to send the window to the next display
 - Config reloads automatically when you save it
@@ -26,11 +26,12 @@ This builds `Mullion.app`, copies it to `/Applications`, and registers a LaunchA
 On first launch macOS asks for **Accessibility** access (System Settings → Privacy & Security →
 Accessibility). Turn Mullion on, then run `make restart`.
 
-**Quit Divvy first.** Two apps can't own the same shortcut; Mullion logs any shortcut it couldn't claim.
+**Quit Divvy first.** macOS lets two apps register the same shortcut. Mullion can only tell when the
+other app claimed it exclusively; it logs those, but any other overlap goes unnoticed.
 
 | Command | What it does |
 |---|---|
-| `make install` | Build, install to `/Applications`, start at login |
+| `make install` | Build, install to `/Applications` (or `APP_DIR=…`), start at login |
 | `make restart` | Restart the background agent |
 | `make check` | Validate your config file and exit |
 | `make logs` | Follow `~/Library/Logs/Mullion.log` |
@@ -39,9 +40,10 @@ Accessibility). Turn Mullion on, then run `make restart`.
 
 ## Config
 
-`~/.config/mullion/config.json` (or `$XDG_CONFIG_HOME/mullion/config.json`). A default is written on
-first launch. Changes apply as soon as you save; if the file has an error, Mullion beeps, logs it, and
-keeps the previous shortcuts.
+`~/.config/mullion/config.json`. A default is written on first launch. Changes apply as soon as you
+save; if the file can't be read or has an error, Mullion beeps, logs it, and keeps the previous
+shortcuts. Keys it doesn't recognise count as errors, so a typo like `"cycleScreen"` can't quietly fall
+back to the default.
 
 ```json
 {
@@ -69,13 +71,19 @@ keeps the previous shortcuts.
 | `shortcuts[].keys` | | Modifiers and a key joined by `+` |
 | `shortcuts[].cells` | | `x`, `y`: top-left cell, counted from 0 at the top-left. `w`, `h`: size in cells |
 
-**Modifiers:** `ctrl`, `cmd`, `alt` (or `opt`), `shift`. At least one is required.
+**Modifiers:** `ctrl` (or `control`, `⌃`), `cmd` (or `command`, `⌘`), `alt` (or `opt`, `option`, `⌥`),
+`shift` (or `⇧`). At least one is required. Case and spaces around `+` don't matter.
 
 **Keys:** `a`–`z`, `0`–`9`, `left` `right` `up` `down`, `home` `end` `pageup` `pagedown`, `f1`–`f15`,
 `space` `return` `tab` `escape` `delete` `forwarddelete`, and punctuation (`,` `.` `/` `;` `'` `[` `]`
 `-` `=` `` ` `` `\`). On a laptop keyboard, `home`/`end`/`pageup`/`pagedown` are fn + ←/→/↑/↓.
+Some keys have a second name: `enter` for `return`, `esc` for `escape`, `backspace` for `delete`, and
+`comma` `period` `slash` `semicolon` `quote` `leftbracket` `rightbracket` `minus` `equal` `grave`
+`backslash` for the punctuation.
 
-To check a config without restarting: `/Applications/Mullion.app/Contents/MacOS/Mullion --check`.
+To check a config without restarting: `make check`, or
+`/Applications/Mullion.app/Contents/MacOS/Mullion --check [path]`, which checks your config file when no
+path is given. `--help` lists the options.
 
 ## Signing
 
@@ -103,4 +111,4 @@ Use a different certificate with `SIGN_IDENTITY="My Cert" make install`.
   terminals snapping to character cells.
 
 `Sources/MullionCore` holds the config parsing, key names and grid math with no AppKit dependency, and is
-what the tests cover. `Sources/Mullion` is the macOS agent.
+what the tests cover; CI runs them on every push. `Sources/Mullion` is the macOS agent.

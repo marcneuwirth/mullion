@@ -4,18 +4,40 @@ import XCTest
 final class ConfigTests: XCTestCase {
     func testDefaultConfigParses() throws {
         let config = try Config.parse(Data(Config.defaultJSON.utf8))
-        XCTAssertEqual(config.grid, Grid(columns: 6, rows: 6))
-        XCTAssertEqual(config.gap, 0)
-        XCTAssertTrue(config.cycleScreens)
         XCTAssertEqual(config.shortcuts.count, 8)
         XCTAssertEqual(config.shortcuts[0].combo, KeyCombo(keyCode: 0x7B, modifiers: Modifier.control | Modifier.cmd))
     }
 
-    func testOptionalFieldsDefault() throws {
-        let config = try Config.parse(Data(#"{"shortcuts": []}"#.utf8))
-        XCTAssertEqual(config.grid, Grid(columns: 6, rows: 6))
-        XCTAssertEqual(config.gap, 0)
-        XCTAssertTrue(config.cycleScreens)
+    func testOmittedSettingsMatchTheDefaultFile() throws {
+        let written = try Config.parse(Data(Config.defaultJSON.utf8))
+        let omitted = try Config.parse(Data("{}".utf8))
+        XCTAssertEqual(omitted.grid, written.grid)
+        XCTAssertEqual(omitted.gap, written.gap)
+        XCTAssertEqual(omitted.cycleScreens, written.cycleScreens)
+        XCTAssertEqual(omitted.shortcuts, [])
+    }
+
+    func testReadmeShowsTheDefaultFile() throws {
+        let readme = URL(fileURLWithPath: #filePath)
+            .deletingLastPathComponent().deletingLastPathComponent().deletingLastPathComponent()
+            .appendingPathComponent("README.md")
+        let text = try String(contentsOf: readme, encoding: .utf8)
+        XCTAssertTrue(text.contains("```json\n\(Config.defaultJSON)```"), "README's config example differs from Config.defaultJSON")
+    }
+
+    func testUnknownKeysAreRejected() {
+        let cases = [
+            (#"{"cycleScreen": false}"#, #"unknown key "cycleScreen""#),
+            (#"{"grid": {"columns": 4, "row": 4}}"#, #"unknown key "row" at .grid"#),
+            (#"{"shortcuts": [{"keys": "ctrl+a", "cell": {"x": 0, "y": 0, "w": 1, "h": 1}}]}"#, #"unknown key "cell" at .shortcuts[0]"#),
+            (#"{"shortcuts": [{"keys": "ctrl+a", "cells": {"x": 0, "y": 0, "w": 1, "h": 1, "width": 2}}]}"#,
+             #"unknown key "width" at .shortcuts[0].cells"#),
+        ]
+        for (json, message) in cases {
+            XCTAssertThrowsError(try Config.parse(Data(json.utf8)), json) { error in
+                XCTAssertEqual("\(error)", "config error: \(message)")
+            }
+        }
     }
 
     func testCellsOutsideGridAreRejected() {
@@ -120,15 +142,71 @@ final class LayoutTests: XCTestCase {
         XCTAssertEqual(Layout.cycleOrder([laptop, leftMonitor]), [leftMonitor, laptop])
     }
 
-    func testRepeatDetection() {
+    func testRepeatDetection() throws {
         let target = Frame(x: 0, y: 37, w: 756, h: 945)
         let snapped = Frame(x: 0, y: 37, w: 749, h: 940)  // a terminal rounding to whole character cells
+        let left = try shortcut("ctrl+left", Cells(x: 0, y: 0, w: 3, h: 6))
+        let right = try shortcut("ctrl+right", Cells(x: 3, y: 0, w: 3, h: 6))
 
-        XCTAssertTrue(Layout.isRepeat(current: target, target: target, last: nil, shortcutIndex: 0))
-        XCTAssertFalse(Layout.isRepeat(current: snapped, target: target, last: nil, shortcutIndex: 0))
+        XCTAssertTrue(Layout.isRepeat(current: target, target: target, last: nil, shortcut: left))
+        XCTAssertFalse(Layout.isRepeat(current: snapped, target: target, last: nil, shortcut: left))
         XCTAssertTrue(Layout.isRepeat(current: snapped, target: target,
-                                      last: Placement(shortcutIndex: 0, frame: snapped), shortcutIndex: 0))
+                                      last: Placement(shortcut: left, frame: snapped), shortcut: left))
         XCTAssertFalse(Layout.isRepeat(current: snapped, target: target,
-                                       last: Placement(shortcutIndex: 1, frame: snapped), shortcutIndex: 0))
+                                       last: Placement(shortcut: right, frame: snapped), shortcut: left))
     }
+}
+
+final class TargetTests: XCTestCase {
+    // Listed out of order: cycling goes left to right regardless.
+    let laptop = Frame(x: 0, y: 0, w: 1200, h: 800)
+    let external = Frame(x: 1200, y: 0, w: 1200, h: 800)
+    let leftHalf = Cells(x: 0, y: 0, w: 3, h: 6)
+    var screens: [Frame] { [external, laptop] }
+
+    func config(cycleScreens: Bool = true) throws -> Config {
+        var config = try Config.parse(Data("{}".utf8))
+        config.cycleScreens = cycleScreens
+        return config
+    }
+
+    func testFirstPressStaysOnTheWindowsScreen() throws {
+        let left = try shortcut("ctrl+left", leftHalf)
+        let window = Frame(x: 1500, y: 100, w: 400, h: 300)
+        XCTAssertEqual(try config().target(for: left, window: window, screens: screens, last: nil),
+                       Frame(x: 1200, y: 0, w: 600, h: 800))
+    }
+
+    func testRepeatPressMovesToTheNextScreenAndWraps() throws {
+        let left = try shortcut("ctrl+left", leftHalf)
+        let onLaptop = Frame(x: 0, y: 0, w: 600, h: 800)
+        let onExternal = Frame(x: 1200, y: 0, w: 600, h: 800)
+        XCTAssertEqual(try config().target(for: left, window: onLaptop, screens: screens, last: nil), onExternal)
+        XCTAssertEqual(try config().target(for: left, window: onExternal, screens: screens, last: nil), onLaptop)
+    }
+
+    func testRepeatUsesWhereTheSameShortcutLeftTheWindow() throws {
+        let left = try shortcut("ctrl+left", leftHalf)
+        let snapped = Frame(x: 0, y: 0, w: 593, h: 790)
+        XCTAssertEqual(try config().target(for: left, window: snapped, screens: screens,
+                                           last: Placement(shortcut: left, frame: snapped)),
+                       Frame(x: 1200, y: 0, w: 600, h: 800))
+    }
+
+    func testNoCyclingWhenTurnedOffOrOnOneScreen() throws {
+        let left = try shortcut("ctrl+left", leftHalf)
+        let onLaptop = Frame(x: 0, y: 0, w: 600, h: 800)
+        XCTAssertEqual(try config(cycleScreens: false).target(for: left, window: onLaptop, screens: screens, last: nil),
+                       onLaptop)
+        XCTAssertEqual(try config().target(for: left, window: onLaptop, screens: [laptop], last: nil), onLaptop)
+    }
+
+    func testNoScreens() throws {
+        let left = try shortcut("ctrl+left", leftHalf)
+        XCTAssertNil(try config().target(for: left, window: laptop, screens: [], last: nil))
+    }
+}
+
+private func shortcut(_ keys: String, _ cells: Cells) throws -> Shortcut {
+    Shortcut(keys: keys, combo: try KeyCombo(parsing: keys), cells: cells)
 }

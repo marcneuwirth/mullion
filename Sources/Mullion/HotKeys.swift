@@ -33,10 +33,11 @@ final class HotKeys {
     }
 
     /// Returns false if the combo could not be registered, usually because another app already owns it.
+    /// macOS only refuses a combo when both apps ask for it exclusively; any other overlap succeeds silently.
     func register(_ combo: KeyCombo, handler: @escaping () -> Void) -> Bool {
         let id = EventHotKeyID(signature: OSType(0x4D4C_4C4E) /* 'MLLN' */, id: nextID)
         var ref: EventHotKeyRef?
-        let status = RegisterEventHotKey(combo.keyCode, combo.modifiers, id, GetApplicationEventTarget(), 0, &ref)
+        let status = RegisterEventHotKey(combo.keyCode, combo.modifiers, id, GetApplicationEventTarget(), OptionBits(kEventHotKeyExclusive), &ref)
         guard status == noErr, let ref else { return false }
         refs.append(ref)
         handlers[nextID] = handler
