@@ -8,6 +8,11 @@
     <string>Mullion</string>
     <key>CFBundleExecutable</key>
     <string>Mullion</string>
+    <!-- Assets.car (macOS 26) and AppIcon.icns (earlier), built by scripts/icon.sh. -->
+    <key>CFBundleIconFile</key>
+    <string>AppIcon</string>
+    <key>CFBundleIconName</key>
+    <string>AppIcon</string>
     <key>CFBundlePackageType</key>
     <string>APPL</string>
     <key>CFBundleShortVersionString</key>

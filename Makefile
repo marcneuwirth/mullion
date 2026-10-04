@@ -4,7 +4,7 @@ APP        := $(APP_DIR)/Mullion.app
 OLD_AGENT  := $(HOME)/Library/LaunchAgents/com.marcneuwirth.mullion.plist
 QUIT       := pkill -x Mullion; while pgrep -qx Mullion; do sleep 0.1; done
 
-.PHONY: build test check install uninstall restart logs release
+.PHONY: build test check install uninstall restart logs release icon
 
 build:
 	scripts/bundle.sh
@@ -38,6 +38,10 @@ restart:
 
 logs:
 	tail -f "$(HOME)/Library/Logs/Mullion.log"
+
+# Rebuild Resources/Assets.car and AppIcon.icns after editing Resources/AppIcon.icon. Needs Xcode 26.
+icon:
+	scripts/icon.sh
 
 # Signed, notarized zip for distribution; see RELEASING.md.
 release:

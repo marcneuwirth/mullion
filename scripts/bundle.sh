@@ -35,6 +35,10 @@ cp Resources/Info.plist "$APP/Contents/Info.plist"
 if [[ -n "${VERSION:-}" ]]; then plutil -replace CFBundleShortVersionString -string "$VERSION" "$APP/Contents/Info.plist"; fi
 if [[ -n "${BUILD_NUMBER:-}" ]]; then plutil -replace CFBundleVersion -string "$BUILD_NUMBER" "$APP/Contents/Info.plist"; fi
 
+# Copied before signing, which seals everything in the bundle. scripts/icon.sh builds these.
+mkdir -p "$APP/Contents/Resources"
+cp Resources/Assets.car Resources/AppIcon.icns "$APP/Contents/Resources/"
+
 if [[ -n "${SIGN_IDENTITY:-}" ]] && grep -qF "\"$SIGN_IDENTITY" <<<"$identities"; then
     # Notarization requires the hardened runtime and a secure timestamp. Mullion needs no entitlements:
     # Accessibility is a TCC permission, not an entitlement.

@@ -1,3 +1,5 @@
+<p align="center"><img src="docs/logo.png" alt="Mullion" width="256"></p>
+
 # Mullion
 
 *A mullion is the bar that divides a window into panes.*
@@ -116,6 +118,7 @@ make install
 | `make check` | Validate your config file and exit |
 | `make logs` | Follow `~/Library/Logs/Mullion.log` |
 | `make test` | Run the unit tests |
+| `make icon` | Rebuild the app icon from `Resources/AppIcon.icon` (needs Xcode 26) |
 | `make uninstall` | Remove it from Login Items, quit, and delete the app (keeps your config) |
 
 macOS ties Accessibility permission to the app's code signature. `make install` signs with your
