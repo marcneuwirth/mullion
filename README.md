@@ -1,4 +1,9 @@
-<p align="center"><img src="docs/logo.png" alt="Mullion" width="256"></p>
+<p align="center">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="docs/logo-dark.png">
+    <img src="docs/logo.png" alt="Mullion" width="215">
+  </picture>
+</p>
 
 # Mullion
 
