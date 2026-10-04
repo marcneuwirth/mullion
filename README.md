@@ -22,9 +22,14 @@ brew install --cask marcneuwirth/tap/mullion
 Or download `Mullion-<version>.zip` from the [latest release](https://github.com/marcneuwirth/mullion/releases/latest),
 unzip it, and move **Mullion.app** to Applications.
 
-Open Mullion, and turn it on when macOS asks for **Accessibility** access (System Settings → Privacy &
-Security → Accessibility). It has no window or menu bar icon. It adds itself to **Login Items** so it
-starts at login, and opening it again while it runs opens your config file.
+Homebrew starts Mullion after installing it; if you downloaded the zip, open it yourself. Turn it on
+when macOS asks for **Accessibility** access (System Settings → Privacy & Security → Accessibility). It
+has no window or menu bar icon. On first launch it writes a default config and adds itself to **Login
+Items** so it starts at login. Opening it again while it runs opens your config file.
+
+To see whether it's running, run `mullion --status` (Homebrew links the `mullion` command; with the zip,
+use `/Applications/Mullion.app/Contents/MacOS/Mullion`). It also checks your config and shows the end of
+the log. `mullion --restart` quits it and starts it again.
 
 **Quit Divvy first.** macOS lets two apps register the same shortcut. Mullion can only tell when the
 other app claimed it exclusively; it logs those to `~/Library/Logs/Mullion.log`, but any other overlap
@@ -75,8 +80,8 @@ Some keys have a second name: `enter` for `return`, `esc` for `escape`, `backspa
 `comma` `period` `slash` `semicolon` `quote` `leftbracket` `rightbracket` `minus` `equal` `grave`
 `backslash` for the punctuation.
 
-To check a config without restarting: `/Applications/Mullion.app/Contents/MacOS/Mullion --check [path]`,
-which checks your config file when no path is given. `--help` lists the options.
+To check a config without restarting: `mullion --check [path]`, which checks your config file when no
+path is given. `--help` lists the options.
 
 ## How it works
 

@@ -19,6 +19,13 @@ cask "mullion" do
   depends_on macos: :ventura
 
   app "Mullion.app"
+  binary "#{appdir}/Mullion.app/Contents/MacOS/Mullion", target: "mullion"
+
+  # Start it now rather than at the next login: the first launch writes the default config and adds
+  # Mullion to Login Items. On upgrade, this restarts the new version after the uninstall quit stopped the old one.
+  postflight do
+    system_command "/usr/bin/open", args: ["#{appdir}/Mullion.app"]
+  end
 
   uninstall early_script: {
               executable:   "#{appdir}/Mullion.app/Contents/MacOS/Mullion",

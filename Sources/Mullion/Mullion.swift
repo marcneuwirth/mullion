@@ -36,6 +36,8 @@ final class Mullion {
     }
 
     func start() {
+        let version = Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "(unbundled build)"
+        Log.info("started \(version) from \(Bundle.main.bundlePath)")
         if !Windows.isTrusted(prompt: true) {
             Log.info("needs Accessibility permission: System Settings > Privacy & Security > Accessibility")
         }
