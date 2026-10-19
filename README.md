@@ -29,7 +29,8 @@ brew install --cask marcneuwirth/tap/mullion
 Or download `Mullion-<version>.zip` from the [latest release](https://github.com/marcneuwirth/mullion/releases/latest),
 unzip it, and move **Mullion.app** to Applications.
 
-Homebrew starts Mullion after installing it; if you downloaded the zip, open it yourself. Turn it on
+After installing with Homebrew, run `mullion --restart` to start it; if you downloaded the zip, open
+it yourself. `brew upgrade` restarts it for you if it was running. Turn it on
 when macOS asks for **Accessibility** access (System Settings → Privacy & Security → Accessibility). It
 has no window or menu bar icon. On first launch it writes a default config and adds itself to **Login
 Items** so it starts at login. Opening it again while it runs opens your config file.
